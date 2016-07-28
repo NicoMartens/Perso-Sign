@@ -34,21 +34,14 @@ public class PersoSim {
         TerminalFactory factory = TerminalFactory.getDefault();
         List<CardTerminal> terminals = factory.terminals().list();
         System.out.println("Terminals: " + terminals);
-        
-        /*
-         *  choose a terminal by keyword and raise an error 
-         *  if no terminal has been found
-         */
-        int terminalIndex = chooseTerminal(terminals, "REINER SCT");
-        if(terminalIndex == -1){
-        	System.err.println("Error: There is no Terminal for given keyword!");
-        	return;
-        }
-        
+               
         /*
          * get terminal by terminal index
          */
-        CardTerminal terminal = terminals.get(terminalIndex);
+        CardTerminal terminal = chooseTerminal(terminals, "REINER SCT");
+        if(terminal == null){
+        	return;
+        }
         System.out.println("Terminal: " + terminal);
         
         /*
@@ -66,7 +59,6 @@ public class PersoSim {
 		
         
         //--------------- get information about the terminal --------------------------       
-        
         
         // vendor name
         ResponseAPDU vendor = channel.transmit(new CommandAPDU(DatatypeConverter.parseHexBinary("FF9A010100")));
@@ -92,18 +84,17 @@ public class PersoSim {
         
         
         //--------------- commands to establishing pace --------------------------  
-              
         
-        // the Structure of command should be: 02 <L_inputData (short)> <Password-ID> <L_CHAT> <CHAT> <L_PIN> <PIN> <L_CERT_DESC> <CERT_DESC>
+        // CHAT is the Certificate Holder Authorization Template
         byte[] chat = new byte[] {0x7F, 0x4C, 0x0E, 0x06, 0x09, 0x04, 0x00, 0x7F, 0x00, 0x07, 0x03, 0x01, 0x02, 0x03, 0x53, 0x01, 0x03};
         
         // establish PACE Channel
         byte[] pace = establishPACEChannel(2, chat, null, null);
-        println("PACE02: " + DatatypeConverter.printHexBinary(pace));
+        println("PACE: " + DatatypeConverter.printHexBinary(pace));
      
         
-        //--------------- commands to select esign app --------------------------  
         
+        //--------------- commands to select esign app --------------------------  
         
         // application id for the esign app on npa
         byte[] aid  = {(byte) 0xA0, 0x00, 0x00, 0x01, 0x67, 0x45, 0x53, 0x49, 0x47, 0x4E};
@@ -123,6 +114,7 @@ public class PersoSim {
         println("Verify response: " + DatatypeConverter.printHexBinary(verifyResponse));
         
         
+        
         //--------------- commands to execute signature --------------------------
         
         String data = "das ist ein kleines Beispiel fuer fuer daten die signiert werden sollen";
@@ -138,13 +130,14 @@ public class PersoSim {
 	/**
 	 * search for an terminal in terminal list which name contains the keyword
 	 */
-	private static int chooseTerminal(List<CardTerminal> terminals, String keyword){
+	private static CardTerminal chooseTerminal(List<CardTerminal> terminals, String keyword){
 		for(int i=0; i<terminals.size(); i++){
 			if(terminals.get(i).getName().contains(keyword))
-				return i;
+				return terminals.get(i);
 		}
-			
-		return -1;
+	    System.err.println("Error: There is no Terminal for given keyword!");
+	    
+	    return null;
 	}
 
 	
